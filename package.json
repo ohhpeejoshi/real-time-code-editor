@@ -1,0 +1,27 @@
+{
+  "name": "real-time-code-editor",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node backend/index.js",
+    "dev": "nodemon backend/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ohhpeejoshi/real-time-code-editor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ohhpeejoshi/real-time-code-editor/issues"
+  },
+  "homepage": "https://github.com/ohhpeejoshi/real-time-code-editor#readme",
+  "description": "",
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
