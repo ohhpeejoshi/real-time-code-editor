@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css'
 import io from 'socket.io-client'
 import Editor from '@monaco-editor/react';
@@ -10,7 +10,51 @@ const App = () => {
     const [roomId, setRoomId] = useState("");
     const [userName, setUserName] = useState("");
     const [language, setLanguage] = useState("javascript");
-    const [code, setCode] = useState("console.log('Hello World!')");
+    const [code, setCode] = useState("//start coding here...");
+    const [copySuccess, setCopySuccess] = useState('');
+    const [users, setUsers] = useState([]);
+    const [typing, setTyping] = useState("");
+
+
+    useEffect(() => {
+        socket.on('userJoined', (users) => {
+            setUsers(users);
+        });
+
+        socket.on('codeUpdate', (newCode) => {
+            setCode(newCode);
+        });
+
+        socket.on('userTyping', (user) => {
+            setTyping(user.slice(0, 8) + '...' + ' is typing...');
+            setTimeout(() => setTyping(''), 2000);
+        });
+
+        socket.on('languageUpdate', (newLanguage) => {
+            setLanguage(newLanguage);
+        });
+
+
+        return () => {
+            socket.off('userJoined');
+            socket.off('codeUpdate');
+            socket.off('userTyping');
+            socket.off('languageUpdate');
+        }
+    }, []);
+
+
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            socket.emit('leaveRoom');
+        }
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        }
+    }, []);
 
     const joinRoom = () => {
         if (roomId && userName) {
@@ -19,13 +63,35 @@ const App = () => {
         }
     }
 
+    const leaveRoom = () => {
+        socket.emit('leaveRoom');
+        setJoined(false);
+        setRoomId('');
+        setUserName('');
+        setCode('//start coding here...');
+        setLanguage('javascript');
+
+
+    };
+
     const copyRoomId = () => {
         navigator.clipboard.writeText(roomId);
-        alert('Room Id copied to clipboard');
+        setCopySuccess('Copied!');
+        setTimeout(() => {
+            setCopySuccess('');
+        }, 1500);
     }
 
     const handleCodeChange = (newCode) => {
         setCode(newCode);
+        socket.emit('codeChange', { roomId, code: newCode });
+        socket.emit('typing', { roomId, userName });
+    }
+
+    const handleLanguageChange = (e) => {
+        const newLanguage = e.target.value;
+        setLanguage(newLanguage);
+        socket.emit('languageChange', { roomId, language: newLanguage });
     }
 
     if (!joined) {
@@ -46,28 +112,35 @@ const App = () => {
             <div className="room-info">
                 <h2>Room: {roomId}</h2>
                 <button onClick={copyRoomId} className='copy-button'>Copy Id</button>
+                {copySuccess && <p className='copy-success'>{copySuccess}</p>}
             </div>
             <h3>Users in Room:</h3>
             <ul id="users">
-                <li>arpit</li>
-                <li>ram</li>
+                {users.map(
+                    (user, index) => <li key={index}>{user}</li>
+                )}
             </ul>
-            <p className='typing-indicator'>User Typing...</p>
-            <select className='language-selector'>
+            <p className='typing-indicator'>{typing}</p>
+            <select
+                className='language-selector'
+                value={language}
+                onChange={handleLanguageChange}
+
+            >
                 <option value="javascript">JavaScript</option>
                 <option value="python">Python</option>
                 <option value="java">Java</option>
                 <option value="cpp">C++</option>
             </select>
 
-            <button className='leave-button'>Leave Room</button>
+            <button className='leave-button' onClick={leaveRoom}>Leave Room</button>
 
         </div>
 
         <div className="editor-wrapper">
             <Editor
                 height="100%" // remove the quotes from the height property
-                defaultLanguage={language}
+                language={language}
                 value={code}
                 onChange={handleCodeChange}
                 theme='vs-dark'
